@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:rive/rive.dart';
+import 'dart:async'; // Importar el timer
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -22,16 +23,50 @@ class _LoginScreenState extends State<LoginScreen> {
   SMITrigger? _trigFail;
   SMINumber? _numLook;
 
+  // Timer para detener el recorrido de la mirada después de 3 segundos
+  Timer? typingDebounce;
+  
+
+  //Crear variables para FocusNode (Examen: que es un FocusNode (para que un campo de texto esté resaltado) y el ciclo de vida de un widget)
+  final _emailFocusNode = FocusNode();
+  final _passwordFocusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+  
+    // Agregar listeners a los FocusNode
+    _emailFocusNode.addListener(() {
+      if (_emailFocusNode.hasFocus) {
+        // El campo de email tiene el foco
+        if (_isHandsUp != null) {
+          _isHandsUp!.change(false);
+
+          //Mirada neutral
+          _numLook?.value = 50.0;
+        }
+        if (_isChecking != null) {
+          _isChecking!.change(true);
+        }
+      } else {
+        // El campo de email perdió el foco
+        if (_isChecking != null) {
+          _isChecking!.change(false);
+        }
+      }
+    });
+
+    _passwordFocusNode.addListener(() {
+      _isHandsUp?.change(_passwordFocusNode.hasFocus);
+    });
+  }
+
+
+
+
   /// Controladores para leer el texto de los campos
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,15 +114,36 @@ class _LoginScreenState extends State<LoginScreen> {
         
                 // Email
                 TextField(
+                  //Agregar el FocusNode al TextField
+                  focusNode: _emailFocusNode,
                   onChanged: (value){
                     if(_isHandsUp != null){
                       // No tapes los ojos al ver el email
-                      _isHandsUp!.change(false);
+                      //_isHandsUp!.change(false);
                     }
                     // Si isHandsUp es nulo, no hacemos nada
                     if(_isChecking == null) return;
                     //Activa el modo chismoso
                     _isChecking!.change(true);
+
+                    //Implementar recorrido de mirada
+                    //Ajuste de límites del 0 al 100
+                    //80 medida de calibración. Clamp es una función que limita un valor a un rango específico
+                    final look = (value.length / 80.0 * 100.0).clamp(0.0, 100.0);
+
+                    _numLook?.value = look;
+
+                    //Debounce: si vuelve a teclear antes de 3 segundos, reinicia el timer
+                    typingDebounce?.cancel();
+
+                    //Crear nuevo timer
+                    typingDebounce = Timer(const Duration(seconds: 3), () {
+                      if(!mounted) return;
+
+                      // Mirada neutra
+                      _isChecking?.change(false);
+
+                    });
                   },
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -104,10 +160,12 @@ class _LoginScreenState extends State<LoginScreen> {
         
                 // Contraseña
                 TextField(
+                  //Agregar el FocusNode al TextField
+                  focusNode: _passwordFocusNode,
                   onChanged: (value){
                     if(_isChecking != null){
                       // No actives el modo chismoso mientras escribes la contraseña
-                      _isChecking!.change(false);
+                      //_isChecking!.change(false);
                     }
                     if(_isHandsUp == null) return;
                     //Tapa los ojos
@@ -141,5 +199,17 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     );
+  } 
+  @override
+  void dispose(){
+    _emailController.dispose();
+    _passwordController.dispose();
+    typingDebounce?.cancel();
+
+    // Liberar memoria de los FocusNode
+    _emailFocusNode.dispose();
+    _passwordFocusNode.dispose();
+
+    super.dispose();
   }
 }
