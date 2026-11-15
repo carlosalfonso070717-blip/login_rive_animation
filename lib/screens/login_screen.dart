@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:rive/rive.dart';
-import 'dart:async'; // Importar el timer
+import 'dart:async'; //3.1 Importar el timer
+//5.1 Importar Firebase Auth y la pantalla de productos
+import 'package:firebase_auth/firebase_auth.dart';
+import 'products_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -39,6 +42,9 @@ class _LoginScreenState extends State<LoginScreen> {
   String? emailError;
   String? passError;
 
+  //5.2 Variable para mostrar el CircularProgressIndicator mientras carga
+  bool _isLoading = false;
+
    // 4.3 Validadores
   bool isValidEmail(String email) {
     final re = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
@@ -54,7 +60,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // 4.4 Acción del botón de login
-  void _onLogin(){
+  //5.3 Convertir _onLogin en asíncrono (Future<void> ... async)
+  Future<void> _onLogin() async {
     //Recortar espacios en blanco accidentales
     final email = emailCtrl.text.trim();
     final pass = passCtrl.text;
@@ -76,10 +83,45 @@ class _LoginScreenState extends State<LoginScreen> {
     _isHandsUp?.change(false);
     _numLook?.value = 50.0;
 
-    //4.7 Activar triggers
-    if(emailTypedError == null && passTypedError == null){
+    //4.9 Si algún campo tiene formato inválido, activar fallo y detener aquí
+    if (emailTypedError != null || passTypedError != null) {
+      _trigFail?.fire();
+      return;
+    }
+
+    //5.4 Activar el CircularProgressIndicator
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      //5.5 Autenticar usuario en Firebase (esperamos un par de segundos para ver el loading)
+      await Future.delayed(const Duration(seconds: 2));
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: pass,
+      );
+
+      //5.6 Apagar loading, disparar éxito del osito y esperar a que termine su animación
+      setState(() {
+        _isLoading = false;
+      });
       _trigSuccess?.fire();
-    } else {
+      await Future.delayed(const Duration(seconds: 2));
+
+      //5.7 Navegar a la pantalla de productos de Spring Boot
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const ProductsScreen()),
+      );
+    } catch (e) {
+      //5.8 Si Firebase rechaza el login, apagar loading y mostrar al osito triste
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        // Sin mensaje en ningún campo: solo el osito triste (pide la tarea)
+      });
       _trigFail?.fire();
     }
   }
@@ -265,10 +307,19 @@ class _LoginScreenState extends State<LoginScreen> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12.0),
                   ),
-                  onPressed: _onLogin,
+                  onPressed: _isLoading ? null : _onLogin,
                   color: Colors.blue,
                   textColor: Colors.white,
-                  child: const Text('Login'),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 22,
+                          width: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Login'),
                 ),
 
                 const SizedBox(height: 20),
