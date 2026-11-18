@@ -5,52 +5,67 @@ import 'package:http/http.dart' as http;
 class ProductsScreen extends StatelessWidget {
   const ProductsScreen({super.key});
 
-  // 6.1 Parámetro clave: URL base de la API de Spring Boot (puerto 8090)
-  // - Web / iOS Simulator / macOS: usar http://localhost:8090
-  // - Emulador Android: cambiar localhost por 10.0.2.2 (http://10.0.2.2:8090)
-  // - Celular físico: usar la IP de tu computadora (ej. http://192.168.1.X:8090)
-  static const String baseUrl = 'http://localhost:8090';
+  // 6.1 URL base de hotel-backend (Spring Boot usa el puerto 8080 por defecto)
+  // - Web / iOS Simulator / macOS: http://localhost:8080
+  // - Emulador Android: http://10.0.2.2:8080
+  // - Celular físico: http://IP_DE_TU_PC:8080
+  static const String baseUrl = 'http://localhost:8080';
 
-  // 6.2 Función para pedir la lista de productos al endpoint GET /products
-  Future<List<dynamic>> fetchProducts() async {
-    final response = await http.get(Uri.parse('$baseUrl/products'));
-
+  // Pide una lista a la API y la convierte de JSON a List
+  Future<List<dynamic>> _getList(String path) async {
+    final response = await http.get(Uri.parse('$baseUrl$path'));
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Error al cargar productos de la API');
+      return jsonDecode(response.body) as List<dynamic>;
     }
+    throw Exception('Error ${response.statusCode} al cargar $path');
+  }
+
+  // 6.2 Pide habitaciones y hoteles al mismo tiempo, para mostrar el nombre del hotel
+  Future<List<Map<String, dynamic>>> fetchRooms() async {
+    final results = await Future.wait([
+      _getList('/api/habitaciones'),
+      _getList('/api/hoteles'),
+    ]);
+    final rooms = results[0];
+    final hotels = {for (final h in results[1]) h['idHotel']: h['nombre']};
+
+    return rooms
+        .map<Map<String, dynamic>>((r) => {
+              'numero': r['numeroHabitacion'],
+              'tipo': r['tipoHabitacion'],
+              'hotel': hotels[r['idHotel']] ?? 'Hotel ${r['idHotel']}',
+            })
+        .toList();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Productos de Spring Boot')),
+      appBar: AppBar(title: const Text('Habitaciones')),
       // 6.3 FutureBuilder: espera la respuesta de la API y dibuja el resultado
-      body: FutureBuilder<List<dynamic>>(
-        future: fetchProducts(),
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: fetchRooms(),
         builder: (context, snapshot) {
-          // Mientras responde el servidor, mostrar indicador de carga
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          // Si hubo un error de conexión
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           }
 
-          final products = snapshot.data ?? [];
+          final rooms = snapshot.data ?? [];
 
-          // 6.4 Mostrar los elementos de la base de datos en una lista sencilla
+          // 6.4 Lista de habitaciones: número, tipo (categoría) y hotel
           return ListView.builder(
-            itemCount: products.length,
+            itemCount: rooms.length,
             itemBuilder: (context, index) {
-              final product = products[index];
+              final room = rooms[index];
               return ListTile(
-                title: Text(product['name'].toString()),
-                subtitle: Text('Stock: ${product['stock']}'),
-                trailing: Text('\$${product['price']}'),
+                leading: const Icon(Icons.bed),
+                title: Text('Habitación ${room['numero']}'),
+                subtitle: Text('Tipo: ${room['tipo']}\nHotel: ${room['hotel']}'),
+                isThreeLine: true,
               );
             },
           );
