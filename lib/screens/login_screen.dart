@@ -38,25 +38,21 @@ class _LoginScreenState extends State<LoginScreen> {
   final emailCtrl = TextEditingController();
   final passCtrl = TextEditingController();
 
-  //4.2 Errores para mostrar al usuario
-  String? emailError;
-  String? passError;
-
   //5.2 Variable para mostrar el CircularProgressIndicator mientras carga
   bool _isLoading = false;
 
-   // 4.3 Validadores
-  bool isValidEmail(String email) {
-    final re = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
-    return re.hasMatch(email);
-  }
+  // A. Mensaje global único (OWASP: no revelar si falló el correo o la contraseña)
+  static const String _msgInvalid = 'Credenciales inválidas';
 
-  bool isValidPassword(String pass) {
-    // mínimo 8, una mayúscula, una minúscula, un dígito y un especial
-    final re = RegExp(
-      r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$',
-    );
-    return re.hasMatch(pass);
+  void _showGlobalError() {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text(_msgInvalid),
+          backgroundColor: Colors.red,
+        ),
+      );
   }
 
   // 4.4 Acción del botón de login
@@ -66,16 +62,6 @@ class _LoginScreenState extends State<LoginScreen> {
     final email = emailCtrl.text.trim();
     final pass = passCtrl.text;
 
-    // Recalcular errores
-    final emailTypedError = isValidEmail(email) ? null : 'Email inválido';
-    final passTypedError = isValidPassword(pass) ? null : 'Contraseña inválida';
-
-    //4.5 Para mostrar el cambio
-    setState(() {
-      emailError = emailTypedError;
-      passError = passTypedError;
-    });
-
     //4.6 Cerrar el teclado y oso neutro
     FocusScope.of(context).unfocus();
     typingDebounce?.cancel();
@@ -83,9 +69,10 @@ class _LoginScreenState extends State<LoginScreen> {
     _isHandsUp?.change(false);
     _numLook?.value = 50.0;
 
-    //4.9 Si algún campo tiene formato inválido, activar fallo y detener aquí
-    if (emailTypedError != null || passTypedError != null) {
+    //4.9 Solo se valida que los campos no estén vacíos (sin Regex ni error por campo)
+    if (email.isEmpty || pass.isEmpty) {
       _trigFail?.fire();
+      _showGlobalError();
       return;
     }
 
@@ -116,13 +103,15 @@ class _LoginScreenState extends State<LoginScreen> {
         MaterialPageRoute(builder: (_) => const ProductsScreen()),
       );
     } catch (e) {
-      //5.8 Si Firebase rechaza el login, apagar loading y mostrar al osito triste
+      // Ver en consola el motivo real (solo para depurar)
+      debugPrint('Login error: ${e is FirebaseAuthException ? e.code : e}');
+      //5.8 Si Firebase rechaza el login, apagar loading, osito triste y mensaje global
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        // Sin mensaje en ningún campo: solo el osito triste (pide la tarea)
       });
       _trigFail?.fire();
+      _showGlobalError();
     }
   }
 
@@ -244,7 +233,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
                   decoration: InputDecoration(
-                    errorText: emailError,
                     hintText: 'Email',
                     prefixIcon: const Icon(Icons.email),
                     border: OutlineInputBorder(
@@ -271,7 +259,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   obscureText: _isObscure,
                   textInputAction: TextInputAction.done,
                   decoration: InputDecoration(
-                    errorText: passError,
                     hintText: 'Password',
                     prefixIcon: const Icon(Icons.lock),
                     suffixIcon: IconButton(
