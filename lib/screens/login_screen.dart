@@ -4,6 +4,8 @@ import 'dart:async'; //3.1 Importar el timer
 //5.1 Importar Firebase Auth y la pantalla de productos
 import 'package:firebase_auth/firebase_auth.dart';
 import 'products_screen.dart';
+// B. Pantalla de registro
+import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -314,20 +316,31 @@ class _LoginScreenState extends State<LoginScreen> {
                   width: screenSize.width,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Text("Don't have an account?"),
-                      SizedBox(width: 5),
-                      Text(
-                        "Sign Up",
-                        style: TextStyle(
-                          decoration: TextDecoration.underline,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                    children: [
+                      const Text("Don't have an account?"),
+                      const SizedBox(width: 5),
+                      // B. "Sign Up" navega al registro con Navigator.push (se puede regresar)
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const SignUpScreen(),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          "Sign Up",
+                          style: TextStyle(
+                            decoration: TextDecoration.underline,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
                         ),
                       ),
                     ],
-                  )
                   ),
+                ),
               ],
 
             ),
