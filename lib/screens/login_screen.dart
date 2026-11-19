@@ -117,6 +117,49 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  // C. Recuperar contraseña: pide el correo y envía el enlace real con Firebase
+  Future<void> _showResetDialog() async {
+    final resetCtrl = TextEditingController(text: emailCtrl.text.trim());
+    final messenger = ScaffoldMessenger.of(context);
+
+    final email = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Recuperar contraseña'),
+        content: TextField(
+          controller: resetCtrl,
+          keyboardType: TextInputType.emailAddress,
+          decoration: const InputDecoration(hintText: 'Correo electrónico'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, resetCtrl.text.trim()),
+            child: const Text('Enviar'),
+          ),
+        ],
+      ),
+    );
+    resetCtrl.dispose();
+
+    if (email == null || email.isEmpty) return;
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+    } catch (e) {
+      debugPrint('Reset error: ${e is FirebaseAuthException ? e.code : e}');
+    }
+    // Mensaje genérico: no revela si el correo existe (OWASP)
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.'),
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -282,10 +325,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 10),
                 SizedBox(
                   width: screenSize.width,
-                  child: const Text(
-                    "Forgot Password?",
-                    textAlign: TextAlign.right,
-                    style: TextStyle(decoration: TextDecoration.underline),
+                  // C. "Forgot Password?" abre el diálogo de recuperación
+                  child: GestureDetector(
+                    onTap: _showResetDialog,
+                    child: const Text(
+                      "Forgot Password?",
+                      textAlign: TextAlign.right,
+                      style: TextStyle(decoration: TextDecoration.underline),
+                    ),
                   ),
                 ),
 
