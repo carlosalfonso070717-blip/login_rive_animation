@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+// C. Cerrar sesión
+import 'package:firebase_auth/firebase_auth.dart';
+import 'login_screen.dart';
 
 class ProductsScreen extends StatelessWidget {
   const ProductsScreen({super.key});
@@ -41,7 +44,24 @@ class ProductsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Habitaciones')),
+      appBar: AppBar(
+        title: const Text('Habitaciones'),
+        actions: [
+          // C. Cerrar sesión: signOut y regresar al LoginScreen sin poder volver atrás
+          IconButton(
+            tooltip: 'Cerrar sesión',
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              final navigator = Navigator.of(context);
+              await FirebaseAuth.instance.signOut();
+              navigator.pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (route) => false,
+              );
+            },
+          ),
+        ],
+      ),
       // 6.3 FutureBuilder: espera la respuesta de la API y dibuja el resultado
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: fetchRooms(),
