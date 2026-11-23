@@ -37,8 +37,48 @@ class ProductsScreen extends StatelessWidget {
               'numero': r['numeroHabitacion'],
               'tipo': r['tipoHabitacion'],
               'hotel': hotels[r['idHotel']] ?? 'Hotel ${r['idHotel']}',
+              // Hito 2 A. URL pública de Supabase Storage guardada en PostgreSQL
+              'imageUrl': r['imageUrl'],
             })
         .toList();
+  }
+
+  // Hito 2 A. Imagen de la habitación desde Supabase, con errorBuilder si falla
+  Widget _roomImage(String? url) {
+    const placeholder = SizedBox(
+      width: 64,
+      height: 64,
+      child: Icon(Icons.bed, size: 32, color: Colors.grey),
+    );
+
+    if (url == null || url.isEmpty) return placeholder;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Image.network(
+        url,
+        width: 64,
+        height: 64,
+        fit: BoxFit.cover,
+        // Mientras descarga, un circulito
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return const SizedBox(
+            width: 64,
+            height: 64,
+            child: Center(
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          );
+        },
+        // Si la URL está mal o no carga, ícono de imagen rota
+        errorBuilder: (context, error, stackTrace) => const SizedBox(
+          width: 64,
+          height: 64,
+          child: Icon(Icons.broken_image, size: 32, color: Colors.grey),
+        ),
+      ),
+    );
   }
 
   @override
@@ -76,13 +116,13 @@ class ProductsScreen extends StatelessWidget {
 
           final rooms = snapshot.data ?? [];
 
-          // 6.4 Lista de habitaciones: número, tipo (categoría) y hotel
+          // 6.4 Lista de habitaciones: imagen, número, tipo (categoría) y hotel
           return ListView.builder(
             itemCount: rooms.length,
             itemBuilder: (context, index) {
               final room = rooms[index];
               return ListTile(
-                leading: const Icon(Icons.bed),
+                leading: _roomImage(room['imageUrl'] as String?),
                 title: Text('Habitación ${room['numero']}'),
                 subtitle: Text('Tipo: ${room['tipo']}\nHotel: ${room['hotel']}'),
                 isThreeLine: true,
