@@ -44,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
 
   // A. Mensaje global único (OWASP: no revelar si falló el correo o la contraseña)
-  static const String _msgInvalid = 'Credenciales inválidas';
+  static const String _msgInvalid = 'Invalid credentials';
 
   void _showGlobalError() {
     ScaffoldMessenger.of(context)
@@ -125,20 +125,20 @@ class _LoginScreenState extends State<LoginScreen> {
     final email = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Recuperar contraseña'),
+        title: const Text('Reset password'),
         content: TextField(
           controller: resetCtrl,
           keyboardType: TextInputType.emailAddress,
-          decoration: const InputDecoration(hintText: 'Correo electrónico'),
+          decoration: const InputDecoration(hintText: 'Email'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, resetCtrl.text.trim()),
-            child: const Text('Enviar'),
+            child: const Text('Send'),
           ),
         ],
       ),
@@ -155,7 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
     // Mensaje genérico: no revela si el correo existe (OWASP)
     messenger.showSnackBar(
       const SnackBar(
-        content: Text('Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.'),
+        content: Text('If the email is registered, you will receive a link to reset your password.'),
       ),
     );
   }
