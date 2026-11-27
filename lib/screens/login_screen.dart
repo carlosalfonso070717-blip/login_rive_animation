@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:rive/rive.dart';
 import 'dart:async'; //3.1 Importar el timer
@@ -91,10 +92,8 @@ class _LoginScreenState extends State<LoginScreen> {
         password: pass,
       );
 
-      //5.6 Apagar loading, disparar éxito del osito y esperar a que termine su animación
-      setState(() {
-        _isLoading = false;
-      });
+      //5.6 Disparar éxito del osito y esperar a que termine su animación
+      // (el loader sigue girando hasta navegar, el botón no vuelve a decir "Login")
       _trigSuccess?.fire();
       await Future.delayed(const Duration(seconds: 2));
 
@@ -114,6 +113,47 @@ class _LoginScreenState extends State<LoginScreen> {
       });
       _trigFail?.fire();
       _showGlobalError();
+    }
+  }
+
+  // Hito 2 C. Inicio de sesión con Google (proveedor habilitado en Firebase)
+  Future<void> _onGoogleSignIn() async {
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final provider = GoogleAuthProvider();
+      if (kIsWeb) {
+        await FirebaseAuth.instance.signInWithPopup(provider);
+      } else {
+        // Android / iOS: abre la pantalla de Google y regresa a la app
+        await FirebaseAuth.instance.signInWithProvider(provider);
+      }
+
+      // Igual que el login normal: osito celebra y navegar (el loader sigue girando)
+      if (!mounted) return;
+      _trigSuccess?.fire();
+      await Future.delayed(const Duration(seconds: 2));
+
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const ProductsScreen()),
+      );
+    } catch (e) {
+      debugPrint('Google sign-in error: ${e is FirebaseAuthException ? e.code : e}');
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      _trigFail?.fire();
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('Google sign-in was cancelled or failed')),
+        );
     }
   }
 
@@ -346,6 +386,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: _isLoading ? null : _onLogin,
                   color: Colors.blue,
                   textColor: Colors.white,
+                  // Mientras carga, el botón se queda azul (no se pone gris)
+                  disabledColor: Colors.blue,
+                  disabledTextColor: Colors.white,
                   child: _isLoading
                       ? const SizedBox(
                           height: 22,
@@ -356,6 +399,30 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         )
                       : const Text('Login'),
+                ),
+
+                const SizedBox(height: 12),
+                // Hito 2 C. Botón "Continue with Google"
+                SizedBox(
+                  width: screenSize.width,
+                  height: 50,
+                  child: OutlinedButton.icon(
+                    onPressed: _isLoading ? null : _onGoogleSignIn,
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                      ),
+                    ),
+                    icon: const Text(
+                      'G',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red,
+                      ),
+                    ),
+                    label: const Text('Continue with Google'),
+                  ),
                 ),
 
                 const SizedBox(height: 20),
