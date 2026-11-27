@@ -6,6 +6,7 @@ import 'login_screen.dart';
 import '../models/room.dart';
 import '../services/room_api.dart';
 import 'room_form_screen.dart';
+import 'settings_screen.dart';
 
 // Catálogo de habitaciones: tarjetas en GridView, buscador, filtros por tipo,
 // CRUD conectado a Spring Boot y vista "Server unavailable" con Retry.
@@ -138,7 +139,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
       messenger.showSnackBar(
           const SnackBar(content: Text('Server unavailable')));
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('$e')));
+      // Quita el prefijo "Exception: " para mostrar solo el mensaje
+      messenger.showSnackBar(SnackBar(
+        content: Text('$e'.replaceFirst('Exception: ', '')),
+        backgroundColor: Colors.orange,
+      ));
     }
   }
 
@@ -157,6 +162,15 @@ class _ProductsScreenState extends State<ProductsScreen> {
       appBar: AppBar(
         title: const Text('Rooms'),
         actions: [
+          // Hito 2 C. Pantalla de Configuración con el gafete de perfil
+          IconButton(
+            tooltip: 'Settings',
+            icon: const Icon(Icons.settings),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            ),
+          ),
           // C. Cerrar sesión: signOut y regresar al LoginScreen sin poder volver atrás
           IconButton(
             tooltip: 'Sign out',

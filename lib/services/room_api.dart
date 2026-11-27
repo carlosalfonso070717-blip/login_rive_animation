@@ -87,6 +87,10 @@ class RoomApi {
   Future<void> deleteRoom(int id) async {
     final res = await _send(
         () => http.delete(Uri.parse('$baseUrl/api/habitaciones/$id')));
+    if (res.statusCode == 409) {
+      // El backend responde 409 si la habitación tiene reservas
+      throw Exception('This room has reservations and cannot be deleted');
+    }
     if (res.statusCode != 204 && res.statusCode != 200) {
       throw Exception('Error ${res.statusCode} deleting the room');
     }
